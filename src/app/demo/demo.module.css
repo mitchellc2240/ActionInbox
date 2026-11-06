@@ -1,0 +1,44 @@
+.demo {
+  max-width: 720px;
+  margin: 3rem auto;
+  padding: 0 1.25rem;
+  color: #172b24;
+  background: #fff;
+}
+
+.demo h1 { font-size: 2rem; font-weight: 700; }
+.demo h2 { font-size: 1.4rem; font-weight: 700; }
+.demo p, .demo form, .demo section { margin-block: 1rem; }
+.demo a { text-decoration: underline; }
+.demo fieldset { display: grid; gap: 1rem; }
+.demo label { display: block; }
+.demo input:not([type="checkbox"]), .demo select, .demo textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid #61766c;
+  border-radius: .4rem;
+  padding: .5rem;
+}
+.demo button {
+  justify-self: start;
+  background: #215442;
+  color: white;
+  padding: .5rem .9rem;
+  border-radius: .4rem;
+}
+.demo ol { list-style: decimal; padding-inline-start: 1.6rem; }
+.demo li { margin-block: .8rem; }
+.assignment { display: flex; align-items: flex-start; gap: .75rem; }
+.assignment > input { margin-block-start: .35rem; }
+.assignment summary { cursor: pointer; font-weight: 700; }
+.assignment small { font-weight: 400; }
+
+.assignment .missingDeadline {
+  display: inline-block;
+  margin-inline-start: .5rem;
+  padding: .1rem .45rem;
+  border-radius: .35rem;
+  background: #fff0c2;
+  color: #654400;
+  font-weight: 600;
+}
