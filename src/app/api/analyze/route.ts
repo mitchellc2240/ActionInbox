@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { getAuth } from "@/lib/auth";
-import { hasPilotAccess } from "@/lib/pilot";
+import { canUseWorkspace } from "@/lib/billing";
+import { reserveAnalysis, savePlan } from "@/lib/workspace-db";
 
 const maxImageBytes = 3 * 1024 * 1024;
 const imageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -28,12 +29,18 @@ export async function POST(request: Request) {
   const form = await request.formData().catch(() => null);
   if (!form) return error("Could not read your submission.", 400);
   const pilot = form.get("workflow") === "email";
+  let userId: string | undefined;
   if (pilot) {
     const auth = getAuth();
     if (!auth) return error("Accounts are unavailable.", 503);
-    const { data: session } = await auth.getSession();
-    if (!session?.user || !hasPilotAccess(session.user.id)) {
-      return error("An active pilot membership is required.", 403);
+    try {
+      const { data: session } = await auth.getSession();
+      if (!session?.user || !await canUseWorkspace(session.user.id)) {
+        return error("An active subscription is required.", 403);
+      }
+      userId = session.user.id;
+    } catch {
+      return error("Could not verify your subscription. Try again shortly.", 503);
     }
   } else {
     if (!code) return error("The demo is waiting for server setup.", 503);
@@ -60,6 +67,9 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (userId && !await reserveAnalysis(userId)) {
+      return error("Daily analysis limit reached. Try again after midnight UTC.", 429);
+    }
     const upstream = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -119,7 +129,9 @@ export async function POST(request: Request) {
     if (result.status !== "completed" || typeof output !== "string") {
       return error("Could not complete the analysis. Try clearer or shorter input.", 422);
     }
-    return Response.json(JSON.parse(output));
+    const plan = JSON.parse(output);
+    if (userId) await savePlan(userId, output);
+    return Response.json(plan);
   } catch {
     return error("Analysis did not finish. Please try again.", 502);
   }

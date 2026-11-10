@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 type Plan = {
   summary: string;
@@ -9,6 +10,7 @@ type Plan = {
 };
 
 export function EmailForm() {
+  const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,6 +27,7 @@ export function EmailForm() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Analysis failed.");
       setPlan(result);
+      router.refresh();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Analysis failed.");
     } finally {

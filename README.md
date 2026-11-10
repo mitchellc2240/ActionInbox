@@ -1,18 +1,21 @@
 # ActionInbox
 
-## Paid pilot setup
+## Subscription setup
 
 Set these variables in Vercel for the deployment environment:
 
 - `NEON_AUTH_BASE_URL` — the Neon Auth URL of that environment's database branch.
 - `NEON_AUTH_COOKIE_SECRET` — a random secret of at least 32 characters, unique to the environment.
 - `OPENAI_API_KEY` — the existing server-side key for email analysis.
-- `ACTIONINBOX_STRIPE_PAYMENT_LINK` — a Stripe-hosted Payment Link for the pilot plan. Start with a test-mode link. Leave it unset to keep checkout hidden.
-- `ACTIONINBOX_PILOT_USER_IDS` — comma-separated Neon Auth user IDs with active access. Leave it unset to deny all pilot access.
+- `DATABASE_URL` — pooled Neon connection for the same database branch as Auth. Apply [the workspace migration](db/002_workspace.sql) to each deployment database.
+- `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` — Stripe credentials and the recurring price. Use matching test values in Preview and matching live values in Production.
+- `ACTIONINBOX_SITE_URL` — public site origin used for Stripe's return URL.
+- `ACTIONINBOX_PILOT_USER_IDS` — optional comma-separated account IDs for internal testing without payment. Vercel Production ignores it.
+- `ACTIONINBOX_SUPPORT_EMAIL` — customer support email shown on the account page.
 
-Add the deployed site to Neon Auth's trusted domains and configure the production email provider for verification. Deploy after setting variables. Visit `/account` to register and sign in. Stripe receives a reference ID and a prefilled email, both of which can be edited by the customer. Confirm the paid transaction in Stripe and verify the buyer's identity against the intended Neon Auth user before adding their ID. Redeploy after adding or removing access. Use Stripe's hosted customer portal or handle cancellation directly in Stripe and remove the ID when access ends.
+Add the deployed site to Neon Auth's trusted domains and configure the production email provider for verification. In Stripe, activate the customer portal and allow subscription cancellation. Deploy after setting variables. Visit `/account` to register and subscribe. ActionInbox checks the subscription for the configured price directly in Stripe before allowing workspace access. The billing portal supports payment details and cancellation.
 
-Before switching to a live Payment Link, test signup, sign-in, test payment, manual activation, analysis at `/workspace`, and access removal. The pilot processes pasted text without saving it to ActionInbox. The assignment demo remains available at `/demo` with its existing access code.
+Before accepting live payments, test signup, sign-in, a test subscription, workspace analysis, saved plans, task completion, and cancellation. Use a separate Neon branch/database for Preview when testing Stripe, because stored Stripe customer IDs are mode-specific. ActionInbox saves generated plans and task completion state. The assignment demo remains at `/demo` with its existing access code.
 
 A responsive, one-page marketing website for an upcoming AI-powered email and task management SaaS. Created by Mitchell Cesanek for a university entrepreneurship assignment.
 
