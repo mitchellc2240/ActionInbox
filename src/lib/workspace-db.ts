@@ -37,12 +37,15 @@ export type SavedPlan = {
   completed: Record<string, boolean>;
 };
 
-export async function listPlans(userId: string) {
+export const plansPerPage = 25;
+
+export async function listPlans(userId: string, query: string, page: number) {
   return await database()`
     SELECT id, result, completed FROM actioninbox.plans
     WHERE user_id = ${userId}
+      AND (${query} = '' OR strpos(lower(result::text), lower(${query})) > 0)
     ORDER BY created_at DESC, id DESC
-    LIMIT 25
+    LIMIT ${plansPerPage + 1} OFFSET ${(page - 1) * plansPerPage}
   ` as SavedPlan[];
 }
 

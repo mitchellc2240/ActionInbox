@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ReplyDraft } from "./reply-draft";
 
 type Plan = {
   summary: string;
@@ -50,7 +51,7 @@ export function EmailForm() {
         {plan.tasks.length ? <ol>
           {plan.tasks.map((task, index) => <li key={index}>{task.title}{task.deadline && ` · Due ${task.deadline}`}</li>)}
         </ol> : <p>No clear tasks found.</p>}
-        <label>Draft reply<textarea readOnly value={plan.reply_draft} rows={5} /></label>
+        <ReplyDraft key={plan.reply_draft} draft={plan.reply_draft} />
       </section>}
     </>
   );
