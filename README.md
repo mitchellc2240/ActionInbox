@@ -15,7 +15,7 @@ Set these server-side environment variables in the Vercel deployment environment
 | `ACTIONINBOX_SUPPORT_EMAIL` | Optional address for beta help |
 | `ACTIONINBOX_DEMO_CODE` | Optional access code for the separate assignment demo |
 
-Apply [002_workspace.sql](db/002_workspace.sql) and [003_beta_usage.sql](db/003_beta_usage.sql), in order, using the Neon SQL Editor for that branch and database. Add the production site origin to Neon Auth's trusted domains. Enable email/password signup and configure verification and mail delivery for the branch. See the [Neon Auth production checklist](https://neon.com/docs/auth/production-checklist).
+Apply [002_workspace.sql](db/002_workspace.sql), [003_beta_usage.sql](db/003_beta_usage.sql), and [004_analysis_preferences.sql](db/004_analysis_preferences.sql) in order using the Neon SQL Editor for that branch and database. Add the production site origin to Neon Auth's trusted domains. Enable email/password signup and configure verification and mail delivery for the branch. See the [Neon Auth production checklist](https://neon.com/docs/auth/production-checklist).
 
 Deploy the commit to Production after saving these settings. Vercel automatically builds pushes to its configured production branch when the Git integration is active. Verify with two independent accounts in separate browser sessions.
 

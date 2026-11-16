@@ -1,9 +1,30 @@
 import { neon } from "@neondatabase/serverless";
+import { defaultPreferences, type AnalysisPreferences } from "./analysis-preferences";
 
 export function database() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is missing");
   return neon(url);
+}
+
+export async function getAnalysisPreferences(userId: string): Promise<AnalysisPreferences> {
+  const [preferences] = await database()`
+    SELECT summary_length, task_scope, reply_tone
+    FROM actioninbox.analysis_preferences
+    WHERE user_id = ${userId}
+  ` as AnalysisPreferences[];
+  return preferences ?? defaultPreferences;
+}
+
+export async function saveAnalysisPreferences(userId: string, preferences: AnalysisPreferences) {
+  await database()`
+    INSERT INTO actioninbox.analysis_preferences (user_id, summary_length, task_scope, reply_tone)
+    VALUES (${userId}, ${preferences.summary_length}, ${preferences.task_scope}, ${preferences.reply_tone})
+    ON CONFLICT (user_id) DO UPDATE SET
+      summary_length = EXCLUDED.summary_length,
+      task_scope = EXCLUDED.task_scope,
+      reply_tone = EXCLUDED.reply_tone
+  `;
 }
 
 export async function reserveAnalysis(userId: string) {
