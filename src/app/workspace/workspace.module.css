@@ -111,6 +111,10 @@
 .panel fieldset > button { background: var(--green); color: white; }
 .panel fieldset > button:hover { background: #103c2d; }
 .panel button:disabled { opacity: .65; cursor: default; }
+.deletePlan { margin-top: 1rem; }
+.deletePlan button:first-of-type { color: #963b2a; }
+.deletePlan button:first-of-type:hover { background: #fbefec; }
+.deletePlan button + button { margin-inline-start: .5rem; }
 .panel :is(input, textarea, button, summary):focus-visible {
   outline: 2px solid #57866a;
   outline-offset: 2px;

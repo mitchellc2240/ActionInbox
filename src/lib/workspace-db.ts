@@ -79,3 +79,10 @@ export async function setTask(userId: string, planId: string, index: number, don
       AND ${index}::integer < jsonb_array_length(result->'tasks')
   `;
 }
+
+export async function deletePlan(userId: string, planId: string) {
+  await database()`
+    DELETE FROM actioninbox.plans
+    WHERE user_id = ${userId} AND id = ${planId}::uuid
+  `;
+}

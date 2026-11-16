@@ -1,4 +1,5 @@
 .section { margin-top: 1.25rem; }
+.filters { margin-top: 1.15rem; flex-wrap: wrap; }
 .error { margin-top: 1rem; color: #963b2a; }
 .monthHeader {
   display: flex;

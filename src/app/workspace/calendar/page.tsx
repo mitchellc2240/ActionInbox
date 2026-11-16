@@ -7,21 +7,25 @@ import { WorkspaceHeader } from "../workspace-header";
 import styles from "../workspace.module.css";
 import calendar from "./calendar.module.css";
 import { calendarDate, formatCalendarDate, monthKey } from "./dates";
+import { matchesTaskFilter, parseTaskFilter, taskFilters, type TaskFilter } from "./task-filters";
 
 export const dynamic = "force-dynamic";
 
 const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default async function CalendarPage({ searchParams }: {
-  searchParams: Promise<{ month?: string | string[] }>;
+  searchParams: Promise<{ month?: string | string[]; filter?: string | string[] }>;
 }) {
   const auth = getAuth();
   const session = auth ? (await auth.getSession()).data : null;
   if (!session?.user) redirect("/account");
 
   const plans = await listTaskPlans(session.user.id).catch(() => null);
-  const { month } = await searchParams;
-  const currentMonth = monthKey(new Date());
+  const { month, filter } = await searchParams;
+  const activeFilter = parseTaskFilter(filter);
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const currentMonth = monthKey(now);
   const selectedMonth = typeof month === "string" && /^(19\d{2}|2\d{3})-(0[1-9]|1[0-2])$/.test(month)
     ? month
     : currentMonth;
@@ -33,9 +37,17 @@ export default async function CalendarPage({ searchParams }: {
     ...task, index, planId: plan.id, planTitle: plan.title, done: Boolean(plan.completed[index]),
     date: calendarDate(task.deadline),
   })));
+  const visibleTasks = tasks.filter((task) => matchesTaskFilter(task, activeFilter, today));
+  const calendarHref = (month: string, filter: TaskFilter) => ({
+    pathname: "/workspace/calendar",
+    query: {
+      ...(month !== currentMonth && { month }),
+      ...(filter !== "all" && { filter }),
+    },
+  });
   const byDate = new Map<string, typeof tasks>();
   const undated = [];
-  for (const task of tasks) {
+  for (const task of visibleTasks) {
     if (!task.date) {
       undated.push(task);
       continue;
@@ -75,13 +87,19 @@ export default async function CalendarPage({ searchParams }: {
         <p className={styles.subtitle}>Due dates and tasks from your saved plans.</p>
         {!plans ? <p className={calendar.error} role="alert">Could not load your tasks. Try again shortly.</p> : (
           <>
+            <nav className={`${styles.tabs} ${calendar.filters}`} aria-label="Filter tasks">
+              {Object.entries(taskFilters).map(([key, title]) => (
+                <Link key={key} href={calendarHref(selectedMonth, key as TaskFilter)}
+                  aria-current={key === activeFilter ? "page" : undefined}>{title}</Link>
+              ))}
+            </nav>
             <section className={`${styles.panel} ${calendar.section}`} aria-labelledby="month-heading">
               <div className={calendar.monthHeader}>
                 <h2 id="month-heading">{formatCalendarDate(first, { month: "long", year: "numeric" })}</h2>
                 <nav className={calendar.monthLinks} aria-label="Calendar months">
-                  {selectedMonth !== "1900-01" && <Link href={{ query: { month: monthKey(new Date(Date.UTC(year, monthIndex - 1, 1))) } }} aria-label="Previous month">←</Link>}
-                  <Link href="/workspace/calendar">Today</Link>
-                  {selectedMonth !== "2999-12" && <Link href={{ query: { month: monthKey(new Date(Date.UTC(year, monthIndex + 1, 1))) } }} aria-label="Next month">→</Link>}
+                  {selectedMonth !== "1900-01" && <Link href={calendarHref(monthKey(new Date(Date.UTC(year, monthIndex - 1, 1))), activeFilter)} aria-label="Previous month">←</Link>}
+                  <Link href={calendarHref(currentMonth, activeFilter)}>Today</Link>
+                  {selectedMonth !== "2999-12" && <Link href={calendarHref(monthKey(new Date(Date.UTC(year, monthIndex + 1, 1))), activeFilter)} aria-label="Next month">→</Link>}
                 </nav>
               </div>
               <div className={calendar.grid}>
@@ -101,8 +119,10 @@ export default async function CalendarPage({ searchParams }: {
               </div>
             </section>
             <section className={`${styles.panel} ${calendar.section}`} aria-labelledby="tasks-heading">
-              <h2 id="tasks-heading">All saved tasks</h2>
+              <h2 id="tasks-heading">{activeFilter === "all" ? "All saved tasks" : `${taskFilters[activeFilter]} tasks`}</h2>
+              {activeFilter === "overdue" && <p className={styles.note}>Overdue means an open task with a due date before today (UTC).</p>}
               {!tasks.length && <p className={calendar.empty}>Analyze an email in your <Link href="/workspace">workspace</Link> to add tasks.</p>}
+              {!!tasks.length && !visibleTasks.length && <p className={calendar.empty}>No {taskFilters[activeFilter].toLowerCase()} tasks.</p>}
               {agenda.map(([date, items]) => (
                 <section key={date} id={`tasks-${date}`} className={calendar.group}>
                   <h3><time dateTime={date}>{formatCalendarDate(new Date(`${date}T00:00:00Z`), { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</time></h3>

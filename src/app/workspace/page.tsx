@@ -7,6 +7,7 @@ import styles from "./workspace.module.css";
 import { EmailForm } from "./email-form";
 import { ReplyDraft } from "./reply-draft";
 import { WorkspaceHeader } from "./workspace-header";
+import { DeletePlanForm } from "./delete-plan-form";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,7 @@ export default async function WorkspacePage({ searchParams }: {
                   })}
                 </ul>
                 <ReplyDraft draft={plan.result.reply_draft} />
+                <DeletePlanForm planId={plan.id} />
               </details>
             ))}
             {(page > 1 || hasNext) && <nav aria-label="Saved plan pages">
