@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ReplyDraft } from "./reply-draft";
+import styles from "./workspace.module.css";
 
 type Plan = {
   summary: string;
@@ -41,12 +42,13 @@ export function EmailForm() {
     <>
       <form onSubmit={submit}>
         <fieldset disabled={busy}>
-          <label>Paste an email<textarea name="text" required maxLength={12000} rows={7} /></label>
+          <label htmlFor="email-text">Paste an email</label>
+          <textarea id="email-text" name="text" required maxLength={12000} rows={8} placeholder="Paste the email you want to analyze…" />
           <button type="submit">{busy ? "Analyzing…" : "Analyze email"}</button>
         </fieldset>
       </form>
       {error && <p role="alert">{error}</p>}
-      {plan && <section aria-live="polite">
+      {plan && <section className={styles.result} aria-live="polite">
         <h2>Your checklist</h2>
         <p>{plan.summary}</p>
         {plan.assignment_deadline && <p>Overall due date · {plan.assignment_deadline}</p>}

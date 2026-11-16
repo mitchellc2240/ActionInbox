@@ -13,10 +13,9 @@ export default async function AccountPage() {
 
   return (
     <main className={styles.demo}>
-      <Link href="/">← ActionInbox</Link>
+      <Link href={user ? "/workspace" : "/"}>{user ? "← Workspace" : "← ActionInbox"}</Link>
       <h1>Your ActionInbox account</h1>
       {auth ? <AccountForm email={session?.user.email} /> : <p>Account setup is in progress.</p>}
-      {user && <p><Link href="/workspace">Open your email workspace</Link></p>}
       {support && <p>Need help? <a href={`mailto:${support}`}>Contact ActionInbox support</a>.</p>}
     </main>
   );
