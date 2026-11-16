@@ -13,4 +13,5 @@ export async function updateTask(planId: string, index: number, done: boolean) {
   }
   await setTask(session.user.id, planId, index, done);
   revalidatePath("/workspace");
+  revalidatePath("/workspace/calendar");
 }

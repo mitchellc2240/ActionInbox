@@ -57,6 +57,20 @@ export async function listPlans(userId: string, query: string, page: number) {
   ` as SavedPlan[];
 }
 
+export async function listTaskPlans(userId: string) {
+  return await database()`
+    SELECT id, result->>'assignment_title' AS title, result->'tasks' AS tasks, completed
+    FROM actioninbox.plans
+    WHERE user_id = ${userId}
+    ORDER BY created_at DESC, id DESC
+  ` as {
+    id: string;
+    title: string | null;
+    tasks: SavedPlan["result"]["tasks"];
+    completed: SavedPlan["completed"];
+  }[];
+}
+
 export async function setTask(userId: string, planId: string, index: number, done: boolean) {
   await database()`
     UPDATE actioninbox.plans

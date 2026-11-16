@@ -1,8 +1,29 @@
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.tabs {
+  display: flex;
+  gap: .375rem;
+  order: 2;
+  width: 100%;
+}
+
+.tabs a {
+  padding: .45rem .8rem;
+  border-radius: .5rem;
+  color: var(--muted);
+  font-size: .875rem;
+  font-weight: 650;
+}
+
+.tabs a:is(:hover, [aria-current="page"]) {
+  background: #e8efe3;
+  color: var(--green);
 }
 
 .account {

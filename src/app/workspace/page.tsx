@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Icon } from "@/components/icon";
 import { getAuth } from "@/lib/auth";
 import { listPlans, plansPerPage } from "@/lib/workspace-db";
 import { updateTask } from "./actions";
 import styles from "./workspace.module.css";
 import { EmailForm } from "./email-form";
 import { ReplyDraft } from "./reply-draft";
+import { WorkspaceHeader } from "./workspace-header";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +25,7 @@ export default async function WorkspacePage({ searchParams }: {
 
   return (
     <>
-      <header className="site-header">
-        <div className={`container ${styles.header}`}>
-          <Link href="/workspace" className="brand" aria-label="ActionInbox workspace">
-            <span className="brand-icon"><Icon name="inbox" /></span>ActionInbox
-          </Link>
-          <Link href="/account" className={styles.account} aria-label="Your account">
-            <span>{session.user.email}</span><strong>Account</strong>
-          </Link>
-        </div>
-      </header>
+      <WorkspaceHeader email={session.user.email} current="workspace" />
       <main className={`container ${styles.workspace}`}>
         <h1>Your workspace</h1>
         <p className={styles.subtitle}>Turn an email into a summary, next steps, and a draft reply.</p>
