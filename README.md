@@ -1,58 +1,31 @@
 # ActionInbox
 
-## Subscription setup
+The free beta turns pasted email into a summary, a checklist with explicit due dates, and a draft reply. Plans and completion states are saved to the signed-in account. The beta allows 20 attempts per account and 200 across beta accounts per UTC day.
 
-Set these variables in Vercel for the deployment environment:
+## Deploy the beta
 
-- `NEON_AUTH_BASE_URL` — the Neon Auth URL of that environment's database branch.
-- `NEON_AUTH_COOKIE_SECRET` — a random secret of at least 32 characters, unique to the environment.
-- `OPENAI_API_KEY` — the existing server-side key for email analysis.
-- `DATABASE_URL` — pooled Neon connection for the same database branch as Auth. Apply [the workspace migration](db/002_workspace.sql) to each deployment database.
-- `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` — Stripe credentials and the recurring price. Use matching test values in Preview and matching live values in Production.
-- `ACTIONINBOX_SITE_URL` — public site origin used for Stripe's return URL.
-- `ACTIONINBOX_PILOT_USER_IDS` — optional comma-separated account IDs for internal testing without payment. Vercel Production ignores it.
-- `ACTIONINBOX_SUPPORT_EMAIL` — customer support email shown on the account page.
+Set these server-side environment variables in the Vercel deployment environment.
 
-Add the deployed site to Neon Auth's trusted domains and configure the production email provider for verification. In Stripe, activate the customer portal and allow subscription cancellation. Deploy after setting variables. Visit `/account` to register and subscribe. ActionInbox checks the subscription for the configured price directly in Stripe before allowing workspace access. The billing portal supports payment details and cancellation.
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | Pooled Neon connection for the same branch and database configured for Neon Auth |
+| `NEON_AUTH_BASE_URL` | Neon Auth base URL for that branch |
+| `NEON_AUTH_COOKIE_SECRET` | Random secret of at least 32 characters, unique to this environment |
+| `OPENAI_API_KEY` | OpenAI project key with access to the Responses API and GPT-5.4 mini |
+| `ACTIONINBOX_SUPPORT_EMAIL` | Optional address for beta help |
+| `ACTIONINBOX_DEMO_CODE` | Optional access code for the separate assignment demo |
 
-Before accepting live payments, test signup, sign-in, a test subscription, workspace analysis, saved plans, task completion, and cancellation. Use a separate Neon branch/database for Preview when testing Stripe, because stored Stripe customer IDs are mode-specific. ActionInbox saves generated plans and task completion state. The assignment demo remains at `/demo` with its existing access code.
+Apply [002_workspace.sql](db/002_workspace.sql) and [003_beta_usage.sql](db/003_beta_usage.sql), in order, using the Neon SQL Editor for that branch and database. Add the production site origin to Neon Auth's trusted domains. Enable email/password signup and configure verification and mail delivery for the branch. See the [Neon Auth production checklist](https://neon.com/docs/auth/production-checklist).
 
-A responsive, one-page marketing website for an upcoming AI-powered email and task management SaaS. Created by Mitchell Cesanek for a university entrepreneurship assignment.
+Deploy the commit to Production after saving these settings. Vercel automatically builds pushes to its configured production branch when the Git integration is active. Verify with two independent accounts in separate browser sessions.
+
+1. Visit `/account` and finish signup and sign-in.
+2. In `/workspace`, paste a fictional email with an explicit deadline. Confirm a summary, tasks, a due date, and a draft reply.
+3. Reload or sign back in. Open the saved plan and mark a task done. Reload again and confirm the completion persisted.
+4. Sign in with the second account and confirm it has an empty history, then save a different plan and check that it appears only for that account.
 
 ## Run locally
 
-Install Node.js 20.9 or newer (Node.js 24 LTS recommended), then open PowerShell:
+Use Node.js 20.9 or newer and install dependencies with `npm ci`. Set the environment variables in an untracked `.env.local` pointing to a development Neon branch. Run `npm run dev` and visit http://localhost:3000/account.
 
-```powershell
-cd C:\Users\m1ces\OneDrive\ActionInbox
-npm install
-npm run dev
-```
-
-Open http://localhost:3000. Stop the server with Ctrl+C. Changes in `src/` update automatically during development.
-
-## Production build
-
-```powershell
-npm run build
-npm run start
-```
-
-Open http://localhost:3000. This serves the production build locally; it does not deploy anything. Use `npm run typecheck` for a separate TypeScript check. Use `npm ci` instead of `npm install` for a clean install from the lockfile.
-
-## Structure
-
-- `src/app/page.tsx`: marketing content and page sections.
-- `src/app/layout.tsx`: root layout, SEO and social metadata.
-- `src/app/globals.css`: Tailwind import, design tokens and responsive styles.
-- `src/components/product-preview.tsx`: static, explicitly labeled concept dashboard.
-- `src/components/icon.tsx`: shared SVG icons.
-- `src/app/icon.svg`: product favicon.
-
-Built with Next.js App Router, TypeScript, and Tailwind CSS v4. The page uses Server Components and system fonts, without external font requests or a client-side JavaScript dependency for its interactions. Navigation links scroll to page sections.
-
-## Scope and future development
-
-This iteration is marketing only. The dashboard is an illustrative concept with fictional example content. The coming-soon call to action is an informational section, with no signup or data collection. Authentication, AI processing, PostgreSQL, email integrations, and Stripe subscriptions are not implemented or connected. No environment variables are needed. Future backend features can be added through App Router routes, server modules, and dedicated components as requirements are defined. Do not place secrets in browser code or commit environment files.
-
-Nothing has been deployed.
+Run `npm run typecheck` and `npm run build` before deploying.

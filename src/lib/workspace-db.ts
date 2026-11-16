@@ -8,10 +8,17 @@ export function database() {
 
 export async function reserveAnalysis(userId: string) {
   const rows = await database()`
-    INSERT INTO actioninbox.analysis_usage AS usage (user_id, usage_day, attempts)
-    VALUES (${userId}, (now() AT TIME ZONE 'UTC')::date, 1)
-    ON CONFLICT (user_id, usage_day) DO UPDATE SET attempts = usage.attempts + 1
-    WHERE usage.attempts < 20
+    WITH account_attempt AS (
+      INSERT INTO actioninbox.analysis_usage AS usage (user_id, usage_day, attempts)
+      VALUES (${userId}, (now() AT TIME ZONE 'UTC')::date, 1)
+      ON CONFLICT (user_id, usage_day) DO UPDATE SET attempts = usage.attempts + 1
+      WHERE usage.attempts < 20
+      RETURNING usage_day
+    )
+    INSERT INTO actioninbox.beta_usage AS usage (usage_day, attempts)
+    SELECT usage_day, 1 FROM account_attempt
+    ON CONFLICT (usage_day) DO UPDATE SET attempts = usage.attempts + 1
+    WHERE usage.attempts < 200
     RETURNING attempts
   `;
   return rows.length === 1;
@@ -31,6 +38,7 @@ export type SavedPlan = {
   result: {
     assignment_title: string | null;
     summary: string;
+    assignment_deadline?: string | null;
     reply_draft: string;
     tasks: { title: string; deadline: string | null }[];
   };

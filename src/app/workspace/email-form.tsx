@@ -6,6 +6,7 @@ import { ReplyDraft } from "./reply-draft";
 
 type Plan = {
   summary: string;
+  assignment_deadline: string | null;
   tasks: { title: string; deadline: string | null }[];
   reply_draft: string;
 };
@@ -25,8 +26,8 @@ export function EmailForm() {
     setBusy(true);
     try {
       const response = await fetch("/api/analyze", { method: "POST", body });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Analysis failed.");
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result) throw new Error(result?.error ?? "Analysis is temporarily unavailable. Try again shortly.");
       setPlan(result);
       router.refresh();
     } catch (failure) {
@@ -40,7 +41,7 @@ export function EmailForm() {
     <>
       <form onSubmit={submit}>
         <fieldset disabled={busy}>
-          <label>Client email<textarea name="text" required maxLength={12000} rows={7} /></label>
+          <label>Paste an email<textarea name="text" required maxLength={12000} rows={7} /></label>
           <button type="submit">{busy ? "Analyzing…" : "Analyze email"}</button>
         </fieldset>
       </form>
@@ -48,6 +49,7 @@ export function EmailForm() {
       {plan && <section aria-live="polite">
         <h2>Your checklist</h2>
         <p>{plan.summary}</p>
+        {plan.assignment_deadline && <p>Overall due date · {plan.assignment_deadline}</p>}
         {plan.tasks.length ? <ol>
           {plan.tasks.map((task, index) => <li key={index}>{task.title}{task.deadline && ` · Due ${task.deadline}`}</li>)}
         </ol> : <p>No clear tasks found.</p>}

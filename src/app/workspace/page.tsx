@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
-import { canUseWorkspace } from "@/lib/billing";
 import { listPlans, plansPerPage } from "@/lib/workspace-db";
 import { updateTask } from "./actions";
 import styles from "../demo/demo.module.css";
@@ -15,20 +14,22 @@ export default async function WorkspacePage({ searchParams }: {
 }) {
   const auth = getAuth();
   const { data: session } = auth ? await auth.getSession() : { data: null };
-  if (!session?.user || !await canUseWorkspace(session.user.id)) redirect("/account");
+  if (!session?.user) redirect("/account");
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q.trim().slice(0, 120) : "";
   const requestedPage = typeof params.page === "string" ? Number(params.page) : 1;
   const page = Number.isSafeInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 10_000 ? requestedPage : 1;
-  const plans = await listPlans(session.user.id, query, page);
-  const hasNext = plans.length > plansPerPage && page < 10_000;
+  const plans = await listPlans(session.user.id, query, page).catch(() => null);
+  const hasNext = Boolean(plans && plans.length > plansPerPage && page < 10_000);
 
   return (
     <main className={styles.demo}>
       <Link href="/account">← Your account</Link>
       <h1>Turn a client email into a checklist</h1>
       <p>Remove private details before submitting. Your email text goes to OpenAI for analysis. ActionInbox saves the generated plan and task status in your account, and allows up to 20 analysis attempts per UTC day.</p>
-      <EmailForm />
+      {plans && process.env.OPENAI_API_KEY
+        ? <EmailForm />
+        : <p role="alert">Email analysis is temporarily unavailable. Try again shortly.</p>}
       <section>
         <h2>Saved plans</h2>
         <form action="/workspace">
@@ -36,11 +37,13 @@ export default async function WorkspacePage({ searchParams }: {
           <button type="submit">Search</button>
           {query && <Link href="/workspace">Clear search</Link>}
         </form>
-        {!plans.length && <p>{query || page > 1 ? "No matching plans on this page." : "Your analyses will appear here."}</p>}
-        {plans.slice(0, plansPerPage).map((plan) => (
+        {!plans && <p role="alert">Could not load your saved plans. Try again shortly.</p>}
+        {plans?.length === 0 && <p>{query || page > 1 ? "No matching plans on this page." : "Your analyses will appear here."}</p>}
+        {plans?.slice(0, plansPerPage).map((plan) => (
           <details key={plan.id}>
             <summary>{plan.result.assignment_title ?? "Email plan"}</summary>
             <p>{plan.result.summary}</p>
+            {plan.result.assignment_deadline && <p>Overall due date · {plan.result.assignment_deadline}</p>}
             <ul>
               {plan.result.tasks.map((task, index) => {
                 const done = Boolean(plan.completed[index]);

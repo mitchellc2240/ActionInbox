@@ -8,6 +8,7 @@ const auth = createAuthClient();
 export function AccountForm({ email }: { email?: string }) {
   const [signup, setSignup] = useState(false);
   const [recovery, setRecovery] = useState<"request" | "reset" | null>(null);
+  const [verifyAddress, setVerifyAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -22,6 +23,18 @@ export function AccountForm({ email }: { email?: string }) {
     setBusy(true);
     setMessage("");
     try {
+      if (verifyAddress) {
+        const { error } = await auth.emailOtp.verifyEmail({
+          email: verifyAddress,
+          otp: String(fields.get("otp")).trim(),
+        });
+        if (error) {
+          setMessage("Check the verification code or request a new one.");
+          return;
+        }
+        window.location.assign("/workspace");
+        return;
+      }
       if (recovery === "request") {
         await auth.forgetPassword.emailOtp({ email: credentials.email });
         setRecovery("reset");
@@ -46,14 +59,32 @@ export function AccountForm({ email }: { email?: string }) {
         : await auth.signIn.email(credentials);
 
       if (error) {
+        if (error.code === "EMAIL_NOT_VERIFIED") {
+          setVerifyAddress(credentials.email);
+          setMessage("Check your email for a verification code, or request a new one.");
+          return;
+        }
         setMessage(signup ? "Could not create your account. Check your details and try again." : "Could not sign in. Check your credentials and email verification.");
       } else if (signup && !data?.token) {
-        setMessage("Check your email for a verification link, then sign in.");
+        setVerifyAddress(credentials.email);
+        setMessage("Check your email for a verification code.");
       } else {
-        window.location.assign("/account");
+        window.location.assign("/workspace");
       }
     } catch {
       setMessage("Accounts are temporarily unavailable. Try again shortly.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendVerification() {
+    setBusy(true);
+    try {
+      const { error } = await auth.emailOtp.sendVerificationOtp({ email: verifyAddress, type: "email-verification" });
+      setMessage(error ? "Could not send a code. Wait a moment and try again." : "A new code was sent. Check your email.");
+    } catch {
+      setMessage("Could not send a code. Try again shortly.");
     } finally {
       setBusy(false);
     }
@@ -80,6 +111,16 @@ export function AccountForm({ email }: { email?: string }) {
           <p>Signed in as {email}</p>
           <button type="button" disabled={busy} onClick={signOut}>Sign out</button>
         </>
+      ) : verifyAddress ? (
+        <form onSubmit={submit}>
+          <fieldset disabled={busy}>
+            <p>Verify {verifyAddress}</p>
+            <label>Verification code<input name="otp" autoComplete="one-time-code" inputMode="numeric" maxLength={12} required /></label>
+            <button type="submit">Verify email</button>
+            <button type="button" onClick={resendVerification}>Send a new code</button>
+            <button type="button" onClick={() => { setVerifyAddress(""); setSignup(false); setMessage(""); }}>Back to sign in</button>
+          </fieldset>
+        </form>
       ) : (
         <form onSubmit={submit} key={String(signup)}>
           <fieldset disabled={busy}>
