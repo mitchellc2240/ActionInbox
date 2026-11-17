@@ -8,7 +8,7 @@ const labels = {
   summary_length: "Summary length",
   task_scope: "Which actions to include",
   reply_tone: "Draft reply tone",
-} satisfies Record<keyof AnalysisPreferences, string>;
+} satisfies Record<keyof typeof preferenceOptions, string>;
 
 export function PreferencesForm({ preferences }: { preferences: AnalysisPreferences }) {
   const [values, setValues] = useState<Record<keyof AnalysisPreferences, string>>(preferences);
@@ -17,7 +17,7 @@ export function PreferencesForm({ preferences }: { preferences: AnalysisPreferen
   return (
     <form action={action}>
       <fieldset disabled={pending}>
-        {(Object.keys(labels) as (keyof AnalysisPreferences)[]).map((key) => (
+        {(Object.keys(labels) as (keyof typeof labels)[]).map((key) => (
           <label key={key}>
             {labels[key]}
             <select name={key} value={values[key]} onChange={(event) => {
@@ -29,6 +29,11 @@ export function PreferencesForm({ preferences }: { preferences: AnalysisPreferen
             </select>
           </label>
         ))}
+        <label>
+          Reply sign-off (optional)
+          <textarea name="reply_sign_off" rows={2} maxLength={160} placeholder={"Thanks,\nTaylor"}
+            value={values.reply_sign_off} onChange={(event) => setValues({ ...values, reply_sign_off: event.target.value })} />
+        </label>
         <button type="submit">{pending ? "Saving…" : "Save preferences"}</button>
       </fieldset>
       {result.message && <p role={result.status === "error" ? "alert" : "status"}>{result.message}</p>}

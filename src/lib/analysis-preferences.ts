@@ -15,14 +15,16 @@ export const preferenceOptions = {
   },
 } as const;
 
-export type AnalysisPreferences = {
+type AnalysisOptions = {
   [Field in keyof typeof preferenceOptions]: keyof (typeof preferenceOptions)[Field];
 };
+export type AnalysisPreferences = AnalysisOptions & { reply_sign_off: string };
 
 export const defaultPreferences: AnalysisPreferences = {
   summary_length: "standard",
   task_scope: "direct",
   reply_tone: "professional",
+  reply_sign_off: "",
 };
 
 function isChoice<T extends object>(choices: T, value: unknown): value is keyof T {
@@ -33,10 +35,17 @@ export function parsePreferences(form: FormData): AnalysisPreferences | null {
   const summary_length = form.get("summary_length");
   const task_scope = form.get("task_scope");
   const reply_tone = form.get("reply_tone");
+  const signOff = form.get("reply_sign_off");
   if (!isChoice(preferenceOptions.summary_length, summary_length) ||
       !isChoice(preferenceOptions.task_scope, task_scope) ||
-      !isChoice(preferenceOptions.reply_tone, reply_tone)) return null;
-  return { summary_length, task_scope, reply_tone };
+      !isChoice(preferenceOptions.reply_tone, reply_tone) ||
+      typeof signOff !== "string" || signOff.length > 160) return null;
+  return { summary_length, task_scope, reply_tone, reply_sign_off: signOff.trim() };
+}
+
+export function applySignOff(draft: string, signOff: string) {
+  const body = draft.trim().replace(/(?:^|\r?\n)[\s*_[\]<>]*(?:your name|your signature)[\s*_[\]<>]*$/i, "").trimEnd();
+  return body && signOff ? `${body}\n\n${signOff}` : body;
 }
 
 export function preferenceInstructions({ summary_length, task_scope, reply_tone }: AnalysisPreferences) {

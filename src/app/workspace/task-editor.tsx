@@ -2,9 +2,12 @@
 
 import { useActionState, useState } from "react";
 import { changeTask } from "./actions";
+import { taskPriorities, type TaskPriority } from "@/lib/task-priorities";
 import styles from "./workspace.module.css";
 
-export function TaskEditor({ planId, index, dueDate }: { planId: string; index: number; dueDate: string | null }) {
+export function TaskEditor({ planId, index, dueDate, priority }: {
+  planId: string; index: number; dueDate: string | null; priority?: TaskPriority | null;
+}) {
   const [error, action, pending] = useActionState(changeTask.bind(null, planId, index), "");
   const [confirming, setConfirming] = useState(false);
 
@@ -21,7 +24,11 @@ export function TaskEditor({ planId, index, dueDate }: { planId: string; index: 
         ) : (
           <>
             <label>Due date<input key={dueDate ?? "undated"} type="date" name="due_date" defaultValue={dueDate ?? ""} min="1900-01-01" max="2999-12-31" /></label>
-            <button type="submit" name="intent" value="date" disabled={pending}>{pending ? "Saving…" : "Save date"}</button>
+            <label>Priority<select key={priority ?? "unassigned"} name="priority" defaultValue={priority ?? ""}>
+              <option value="">None</option>
+              {Object.entries(taskPriorities).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select></label>
+            <button type="submit" name="intent" value="edit" disabled={pending}>{pending ? "Saving…" : "Save task"}</button>
             <button type="button" disabled={pending} onClick={() => setConfirming(true)}>Delete task</button>
           </>
         )}

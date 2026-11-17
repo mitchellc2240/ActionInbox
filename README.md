@@ -1,6 +1,6 @@
 # ActionInbox
 
-The free beta turns pasted email into a summary, a checklist with explicit due dates, and a draft reply. Plans and completion states are saved to the signed-in account. The beta allows 20 attempts per account and 200 across beta accounts per UTC day.
+The free beta turns pasted email or a screenshot into a summary, suggested tasks, and an editable draft reply. Accepted tasks appear on the calendar and can be prioritized. Plans and completion states are saved to the signed-in account. The beta allows 20 attempts per account and 200 across beta accounts per UTC day.
 
 ## Deploy the beta
 
@@ -15,13 +15,13 @@ Set these server-side environment variables in the Vercel deployment environment
 | `ACTIONINBOX_SUPPORT_EMAIL` | Optional address for beta help |
 | `ACTIONINBOX_DEMO_CODE` | Optional access code for the separate assignment demo |
 
-Apply [002_workspace.sql](db/002_workspace.sql), [003_beta_usage.sql](db/003_beta_usage.sql), and [004_analysis_preferences.sql](db/004_analysis_preferences.sql) in order using the Neon SQL Editor for that branch and database. Add the production site origin to Neon Auth's trusted domains. Enable email/password signup and configure verification and mail delivery for the branch. See the [Neon Auth production checklist](https://neon.com/docs/auth/production-checklist).
+Apply [002_workspace.sql](db/002_workspace.sql), [003_beta_usage.sql](db/003_beta_usage.sql), [004_analysis_preferences.sql](db/004_analysis_preferences.sql), and [005_reply_sign_off.sql](db/005_reply_sign_off.sql) in order using the Neon SQL Editor for that branch and database. Add the production site origin to Neon Auth's trusted domains. Enable email/password signup and configure verification and mail delivery for the branch. See the [Neon Auth production checklist](https://neon.com/docs/auth/production-checklist).
 
 Deploy the commit to Production after saving these settings. Vercel automatically builds pushes to its configured production branch when the Git integration is active. Verify with two independent accounts in separate browser sessions.
 
 1. Visit `/account` and finish signup and sign-in.
-2. In `/workspace`, paste a fictional email with an explicit deadline. Confirm a summary, tasks, a due date, and a draft reply.
-3. Reload or sign back in. Open the saved plan and mark a task done. Reload again and confirm the completion persisted.
+2. In `/workspace`, paste a fictional email with an explicit deadline or upload a screenshot of one. Confirm a summary, suggested tasks, a due date, and a draft reply.
+3. Accept one task and decline another. Confirm only the accepted task appears on the calendar. Save a priority and edit the reply. Reload and confirm both edits persisted.
 4. Sign in with the second account and confirm it has an empty history, then save a different plan and check that it appears only for that account.
 
 ## Run locally

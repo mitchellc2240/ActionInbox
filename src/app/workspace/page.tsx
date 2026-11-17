@@ -9,6 +9,8 @@ import { ReplyDraft } from "./reply-draft";
 import { WorkspaceHeader } from "./workspace-header";
 import { DeletePlanForm } from "./delete-plan-form";
 import { TaskEditor } from "./task-editor";
+import { TaskReview } from "./task-review";
+import { taskPriorities } from "@/lib/task-priorities";
 import { calendarDate, formatDueDate, taskDueDate } from "@/lib/deadlines";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +39,7 @@ export default async function WorkspacePage({ searchParams }: {
             {plans && process.env.OPENAI_API_KEY
               ? <EmailForm />
               : <p role="alert">Email analysis is temporarily unavailable. Try again shortly.</p>}
-            <p className={styles.note}>Remove private details before submitting. Email text is sent to OpenAI for analysis. Your results are saved to your account.</p>
+            <p className={styles.note}>Remove private details before submitting. Email text or screenshots are sent to OpenAI for analysis. Your results are saved to your account.</p>
           </section>
           <section className={styles.panel}>
             <h2>Saved plans</h2>
@@ -50,29 +52,53 @@ export default async function WorkspacePage({ searchParams }: {
             {plans?.length === 0 && <p className={styles.empty}>{query || page > 1 ? "No matching plans on this page." : "Analyze an email to save your first plan."}</p>}
             {plans?.slice(0, plansPerPage).map((plan) => {
               const overallDate = plan.result.assignment_due_date ?? calendarDate(plan.result.assignment_deadline ?? null, plan.saved_on);
-              return (
-                <details key={plan.id} id={`plan-${plan.id}`} open={params.plan === plan.id || undefined}>
-                  <summary>{plan.result.assignment_title ?? "Email plan"}</summary>
-                  <p>{plan.result.summary}</p>
-                  {plan.result.assignment_deadline && <p>Overall due date · {overallDate ? formatDueDate(overallDate) : plan.result.assignment_deadline}</p>}
-                  {!plan.result.tasks.some(Boolean) && <p>No tasks in this plan.</p>}
-                  <ul>
-                    {plan.result.tasks.map((task, index) => {
-                      if (!task) return null;
+              const tasks = plan.result.tasks.flatMap((task, index) => task ? [{ ...task, index }] : []);
+              const suggestions = tasks.filter((task) => task.review === "pending");
+              const accepted = tasks.filter((task) => task.review !== "pending");
+              const taskRows = (items: typeof tasks) => (
+                <ul className={styles.planTasks}>
+                    {items.map((task) => {
+                      const { index } = task;
                       const done = Boolean(plan.completed[index]);
                       const date = taskDueDate(task, plan.saved_on);
                       const deadline = date ? formatDueDate(date) : task.due_date === null ? null : task.deadline;
                       return <li key={index}>
-                        <form action={updateTask.bind(null, plan.id, index, !done)}>
-                          <span>{task.title}{deadline && ` · Due ${deadline}`} </span>
-                          <button type="submit">{done ? "Reopen" : "Mark done"}</button>
-                          {done && <span> Completed</span>}
-                        </form>
-                        <TaskEditor planId={plan.id} index={index} dueDate={date} />
+                        <strong className={styles.taskTitle}>{task.title}</strong>
+                        <div className={styles.taskMeta}>
+                          {deadline && <span>Due {deadline}</span>}
+                          {task.priority && <span className={styles.priority} data-priority={task.priority}>{taskPriorities[task.priority]}</span>}
+                          {done && <span>Completed</span>}
+                        </div>
+                        {task.review === "pending" ? <TaskReview planId={plan.id} index={index} /> : (
+                          <>
+                            <form action={updateTask.bind(null, plan.id, index, !done)}>
+                              <button type="submit">{done ? "Reopen" : "Mark done"}</button>
+                            </form>
+                            <TaskEditor planId={plan.id} index={index} dueDate={date} priority={task.priority} />
+                          </>
+                        )}
                       </li>;
                     })}
-                  </ul>
-                  <ReplyDraft draft={plan.result.reply_draft} />
+                </ul>
+              );
+              return (
+                <details key={plan.id} id={`plan-${plan.id}`} open={params.plan === plan.id || undefined}>
+                  <summary>{plan.result.assignment_title ?? "Email plan"}</summary>
+                  <section className={styles.planSection}>
+                    <h3 className={styles.sectionTitle}>Email summary</h3>
+                    <p>{plan.result.summary}</p>
+                    {plan.result.assignment_deadline && <p><strong>Overall due date</strong> · {overallDate ? formatDueDate(overallDate) : plan.result.assignment_deadline}</p>}
+                  </section>
+                  {suggestions.length > 0 && <section className={styles.planSection}>
+                    <h3 className={styles.sectionTitle}>Review suggested tasks</h3>
+                    <p>Accept the actions you want on your task list and Calendar.</p>
+                    {taskRows(suggestions)}
+                  </section>}
+                  <section className={styles.planSection}>
+                    <h3 className={styles.sectionTitle}>Saved tasks</h3>
+                    {accepted.length ? taskRows(accepted) : <p>No saved tasks in this plan.</p>}
+                  </section>
+                  <ReplyDraft draft={plan.result.reply_draft} planId={plan.id} />
                   <DeletePlanForm planId={plan.id} />
                 </details>
               );

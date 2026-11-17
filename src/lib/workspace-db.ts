@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { defaultPreferences, type AnalysisPreferences } from "./analysis-preferences";
+import type { TaskPriority } from "./task-priorities";
 
 export function database() {
   const url = process.env.DATABASE_URL;
@@ -9,7 +10,7 @@ export function database() {
 
 export async function getAnalysisPreferences(userId: string): Promise<AnalysisPreferences> {
   const [preferences] = await database()`
-    SELECT summary_length, task_scope, reply_tone
+    SELECT summary_length, task_scope, reply_tone, reply_sign_off
     FROM actioninbox.analysis_preferences
     WHERE user_id = ${userId}
   ` as AnalysisPreferences[];
@@ -18,12 +19,13 @@ export async function getAnalysisPreferences(userId: string): Promise<AnalysisPr
 
 export async function saveAnalysisPreferences(userId: string, preferences: AnalysisPreferences) {
   await database()`
-    INSERT INTO actioninbox.analysis_preferences (user_id, summary_length, task_scope, reply_tone)
-    VALUES (${userId}, ${preferences.summary_length}, ${preferences.task_scope}, ${preferences.reply_tone})
+    INSERT INTO actioninbox.analysis_preferences (user_id, summary_length, task_scope, reply_tone, reply_sign_off)
+    VALUES (${userId}, ${preferences.summary_length}, ${preferences.task_scope}, ${preferences.reply_tone}, ${preferences.reply_sign_off})
     ON CONFLICT (user_id) DO UPDATE SET
       summary_length = EXCLUDED.summary_length,
       task_scope = EXCLUDED.task_scope,
-      reply_tone = EXCLUDED.reply_tone
+      reply_tone = EXCLUDED.reply_tone,
+      reply_sign_off = EXCLUDED.reply_sign_off
   `;
 }
 
@@ -63,7 +65,13 @@ export type SavedPlan = {
     assignment_deadline?: string | null;
     assignment_due_date?: string | null;
     reply_draft: string;
-    tasks: ({ title: string; deadline: string | null; due_date?: string | null } | null)[];
+    tasks: ({
+      title: string;
+      deadline: string | null;
+      due_date?: string | null;
+      priority?: TaskPriority | null;
+      review?: "pending" | "accepted";
+    } | null)[];
   };
   completed: Record<string, boolean>;
 };
@@ -103,21 +111,36 @@ export async function setTask(userId: string, planId: string, index: number, don
     SET completed = jsonb_set(completed, ARRAY[${String(index)}]::text[], to_jsonb(${done}::boolean))
     WHERE user_id = ${userId} AND id = ${planId}::uuid
       AND jsonb_typeof(result->'tasks'->${index}::integer) = 'object'
+      AND (result->'tasks'->${index}::integer->>'review') IS DISTINCT FROM 'pending'
   `;
 }
 
-export async function editSavedTask(userId: string, planId: string, index: number, dueDate: string | null, remove: boolean) {
+export async function editSavedTask(userId: string, planId: string, index: number,
+  changes: { review: "accepted" } | { due_date: string | null; priority: TaskPriority | null } | null,
+  reviewing: boolean,
+) {
   const path = ["tasks", String(index)];
+  const remove = changes === null;
   const rows = await database()`
     UPDATE actioninbox.plans
     SET result = jsonb_set(result, ${path}::text[],
           CASE WHEN ${remove}::boolean THEN 'null'::jsonb
-               ELSE jsonb_set(result #> ${path}::text[], '{due_date}',
-                      COALESCE(to_jsonb(${dueDate}::text), 'null'::jsonb))
+               ELSE (result #> ${path}::text[]) || ${JSON.stringify(changes)}::jsonb
           END),
         completed = CASE WHEN ${remove}::boolean THEN completed - ${String(index)}::text ELSE completed END
     WHERE user_id = ${userId} AND id = ${planId}::uuid
       AND jsonb_typeof(result #> ${path}::text[]) = 'object'
+      AND (COALESCE(result #>> (${path}::text[] || 'review'::text), '') = 'pending') = ${reviewing}::boolean
+    RETURNING id
+  `;
+  return rows.length === 1;
+}
+
+export async function saveReplyDraft(userId: string, planId: string, draft: string) {
+  const rows = await database()`
+    UPDATE actioninbox.plans
+    SET result = jsonb_set(result, '{reply_draft}', to_jsonb(${draft}::text))
+    WHERE user_id = ${userId} AND id = ${planId}::uuid
     RETURNING id
   `;
   return rows.length === 1;

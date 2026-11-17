@@ -8,6 +8,7 @@ import styles from "../workspace.module.css";
 import calendar from "./calendar.module.css";
 import { formatCalendarDate, monthKey, taskDueDate } from "@/lib/deadlines";
 import { TaskEditor } from "../task-editor";
+import { taskPriorities } from "@/lib/task-priorities";
 import { matchesTaskFilter, parseTaskFilter, taskFilters, type TaskFilter } from "./task-filters";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function CalendarPage({ searchParams }: {
   const year = first.getUTCFullYear();
   const monthIndex = first.getUTCMonth();
   const dayCount = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  const tasks = (plans ?? []).flatMap((plan) => plan.tasks.flatMap((task, index) => task ? [{
+  const tasks = (plans ?? []).flatMap((plan) => plan.tasks.flatMap((task, index) => task && task.review !== "pending" ? [{
     ...task, index, planId: plan.id, planTitle: plan.title, done: Boolean(plan.completed[index]),
     date: taskDueDate(task, plan.saved_on),
     deadline: task.due_date === null ? null : task.deadline,
@@ -67,6 +68,7 @@ export default async function CalendarPage({ searchParams }: {
           <li key={`${task.planId}-${task.index}`} className={calendar.task}>
             <div>
               <strong className={task.done ? calendar.done : undefined}>{task.title}</strong>
+              {task.priority && <> <span className={styles.priority} data-priority={task.priority}>{taskPriorities[task.priority]}</span></>}
               <p className={styles.subtitle}>
                 {task.planTitle ?? "Email plan"}{!task.date && task.deadline && ` · Due ${task.deadline}`}
                 {task.done && " · Completed"}
@@ -75,7 +77,7 @@ export default async function CalendarPage({ searchParams }: {
             <form action={updateTask.bind(null, task.planId, task.index, !task.done)}>
               <button type="submit">{task.done ? "Reopen" : "Mark done"}</button>
             </form>
-            <TaskEditor planId={task.planId} index={task.index} dueDate={task.date} />
+            <TaskEditor planId={task.planId} index={task.index} dueDate={task.date} priority={task.priority} />
           </li>
         ))}
       </ul>
