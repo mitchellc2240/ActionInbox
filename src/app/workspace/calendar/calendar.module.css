@@ -43,20 +43,65 @@ a.day:hover { background: #e1ebd8; }
   color: white;
   font-variant-numeric: tabular-nums;
 }
-.group { margin-top: 1.2rem; scroll-margin-top: 1rem; }
+.group { margin-top: 1rem; scroll-margin-top: 1rem; }
 .group:target h3 { color: var(--green); text-decoration: underline; }
-.group h3 { font-weight: 650; }
+.group h3 { color: var(--muted); font-size: .8rem; font-weight: 650; }
 .taskList { margin-top: .35rem; }
 .taskList .task {
-  display: flex;
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: .5rem 1rem;
+  column-gap: .25rem;
   margin: 0;
-  padding: .65rem 0;
+  min-height: 2.5rem;
   border-top: 1px solid var(--line);
 }
-.task p { font-size: .875rem; }
+.task[data-selected] { background: #eff4e8; }
+.task .checkbox { display: grid; place-items: center; min-height: 2.5rem; cursor: pointer; }
+.checkbox input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--green);
+  padding: 0;
+}
+.task button.taskName {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .25rem .65rem;
+  justify-self: stretch;
+  min-height: 2.5rem;
+  padding: .5rem .4rem;
+  border: 0;
+  text-align: left;
+  color: var(--ink);
+}
+.taskName span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.rowError { grid-column: 2; font-size: .875rem; }
+.agendaSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 1.25rem;
+}
+.detail {
+  position: sticky;
+  top: 1rem;
+  min-width: 0;
+  margin-top: 1rem;
+  padding: .85rem;
+  border: 1px solid var(--line);
+  border-radius: .625rem;
+  background: var(--paper);
+}
+.detailHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+.detailHeader h3 { font-weight: 700; }
+.detailHeader button.closeDetails { padding: .15rem .55rem; font-size: 1.125rem; line-height: 1.4; }
+.detail form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem; }
 .done { color: var(--muted); text-decoration: line-through; }
 .empty { margin-top: .75rem; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .agendaSplit { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .detail { position: static; }
+}

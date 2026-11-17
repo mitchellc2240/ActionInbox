@@ -5,15 +5,13 @@ import { changeTask } from "./actions";
 import { taskPriorities, type TaskPriority } from "@/lib/task-priorities";
 import styles from "./workspace.module.css";
 
-export function TaskEditor({ planId, index, dueDate, priority }: {
-  planId: string; index: number; dueDate: string | null; priority?: TaskPriority | null;
+export function TaskEditor({ planId, index, dueDate, priority, expanded = false }: {
+  planId: string; index: number; dueDate: string | null; priority?: TaskPriority | null; expanded?: boolean;
 }) {
   const [error, action, pending] = useActionState(changeTask.bind(null, planId, index), "");
   const [confirming, setConfirming] = useState(false);
 
-  return (
-    <details className={styles.taskEditor}>
-      <summary>{dueDate ? "Edit task" : "Add date or edit task"}</summary>
+  const form = (
       <form action={action} className={styles.taskEditorForm}>
         {confirming ? (
           <>
@@ -34,6 +32,12 @@ export function TaskEditor({ planId, index, dueDate, priority }: {
         )}
         {error && <p role="alert">{error}</p>}
       </form>
+  );
+
+  return expanded ? form : (
+    <details className={styles.taskEditor}>
+      <summary>{dueDate ? "Edit task" : "Add date or edit task"}</summary>
+      {form}
     </details>
   );
 }

@@ -2,13 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { listTaskPlans } from "@/lib/workspace-db";
-import { updateTask } from "../actions";
 import { WorkspaceHeader } from "../workspace-header";
 import styles from "../workspace.module.css";
 import calendar from "./calendar.module.css";
 import { formatCalendarDate, monthKey, taskDueDate } from "@/lib/deadlines";
-import { TaskEditor } from "../task-editor";
-import { taskPriorities } from "@/lib/task-priorities";
+import { AgendaList } from "./agenda-list";
 import { matchesTaskFilter, parseTaskFilter, taskFilters, type TaskFilter } from "./task-filters";
 
 export const dynamic = "force-dynamic";
@@ -61,29 +59,6 @@ export default async function CalendarPage({ searchParams }: {
   }
   const agenda = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
 
-  function taskList(items: typeof tasks) {
-    return (
-      <ul className={calendar.taskList}>
-        {items.map((task) => (
-          <li key={`${task.planId}-${task.index}`} className={calendar.task}>
-            <div>
-              <strong className={task.done ? calendar.done : undefined}>{task.title}</strong>
-              {task.priority && <> <span className={styles.priority} data-priority={task.priority}>{taskPriorities[task.priority]}</span></>}
-              <p className={styles.subtitle}>
-                {task.planTitle ?? "Email plan"}{!task.date && task.deadline && ` · Due ${task.deadline}`}
-                {task.done && " · Completed"}
-              </p>
-            </div>
-            <form action={updateTask.bind(null, task.planId, task.index, !task.done)}>
-              <button type="submit">{task.done ? "Reopen" : "Mark done"}</button>
-            </form>
-            <TaskEditor planId={task.planId} index={task.index} dueDate={task.date} priority={task.priority} />
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
   return (
     <>
       <WorkspaceHeader email={session.user.email} current="calendar" />
@@ -128,18 +103,7 @@ export default async function CalendarPage({ searchParams }: {
               {activeFilter === "overdue" && <p className={styles.note}>Overdue means an open task with a due date before today (UTC).</p>}
               {!tasks.length && <p className={calendar.empty}>Analyze an email in your <Link href="/workspace">workspace</Link> to add tasks.</p>}
               {!!tasks.length && !visibleTasks.length && <p className={calendar.empty}>No {taskFilters[activeFilter].toLowerCase()} tasks.</p>}
-              {agenda.map(([date, items]) => (
-                <section key={date} id={`tasks-${date}`} className={calendar.group}>
-                  <h3><time dateTime={date}>{formatCalendarDate(new Date(`${date}T00:00:00Z`), { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</time></h3>
-                  {taskList(items)}
-                </section>
-              ))}
-              {!!undated.length && (
-                <section className={calendar.group}>
-                  <h3>Without a calendar date</h3>
-                  {taskList(undated)}
-                </section>
-              )}
+              <AgendaList key={activeFilter} dated={agenda} undated={undated} />
             </section>
           </>
         )}
