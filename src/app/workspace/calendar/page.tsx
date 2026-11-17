@@ -6,7 +6,8 @@ import { updateTask } from "../actions";
 import { WorkspaceHeader } from "../workspace-header";
 import styles from "../workspace.module.css";
 import calendar from "./calendar.module.css";
-import { calendarDate, formatCalendarDate, monthKey } from "./dates";
+import { formatCalendarDate, monthKey, taskDueDate } from "@/lib/deadlines";
+import { TaskEditor } from "../task-editor";
 import { matchesTaskFilter, parseTaskFilter, taskFilters, type TaskFilter } from "./task-filters";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +34,11 @@ export default async function CalendarPage({ searchParams }: {
   const year = first.getUTCFullYear();
   const monthIndex = first.getUTCMonth();
   const dayCount = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  const tasks = (plans ?? []).flatMap((plan) => plan.tasks.map((task, index) => ({
+  const tasks = (plans ?? []).flatMap((plan) => plan.tasks.flatMap((task, index) => task ? [{
     ...task, index, planId: plan.id, planTitle: plan.title, done: Boolean(plan.completed[index]),
-    date: calendarDate(task.deadline),
-  })));
+    date: taskDueDate(task, plan.saved_on),
+    deadline: task.due_date === null ? null : task.deadline,
+  }] : []));
   const visibleTasks = tasks.filter((task) => matchesTaskFilter(task, activeFilter, today));
   const calendarHref = (month: string, filter: TaskFilter) => ({
     pathname: "/workspace/calendar",
@@ -66,13 +68,14 @@ export default async function CalendarPage({ searchParams }: {
             <div>
               <strong className={task.done ? calendar.done : undefined}>{task.title}</strong>
               <p className={styles.subtitle}>
-                {task.planTitle ?? "Email plan"}{task.deadline && ` · Due ${task.deadline}`}
+                {task.planTitle ?? "Email plan"}{!task.date && task.deadline && ` · Due ${task.deadline}`}
                 {task.done && " · Completed"}
               </p>
             </div>
             <form action={updateTask.bind(null, task.planId, task.index, !task.done)}>
               <button type="submit">{task.done ? "Reopen" : "Mark done"}</button>
             </form>
+            <TaskEditor planId={task.planId} index={task.index} dueDate={task.date} />
           </li>
         ))}
       </ul>
@@ -132,7 +135,6 @@ export default async function CalendarPage({ searchParams }: {
               {!!undated.length && (
                 <section className={calendar.group}>
                   <h3>Without a calendar date</h3>
-                  {undated.some((task) => task.deadline) && <p className={styles.note}>Deadlines such as “Friday” stay here until the email provides a full date.</p>}
                   {taskList(undated)}
                 </section>
               )}

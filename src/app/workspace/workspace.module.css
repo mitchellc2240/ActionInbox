@@ -130,9 +130,16 @@
 .panel [role="alert"] { color: #963b2a; }
 .panel li { margin-block: .6rem; }
 .panel li form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-.result { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
-.result p { margin-top: .6rem; }
-.result ol { list-style: decimal; padding-inline-start: 1.4rem; }
+.panel .taskEditor {
+  width: 100%;
+  padding: .35rem 0;
+  border: 0;
+  font-size: .875rem;
+}
+.taskEditor summary { color: var(--green); }
+.taskEditorForm { margin-top: .5rem; }
+.panel .taskEditorForm { align-items: flex-end; }
+.taskEditorForm input { margin-top: .2rem; padding: .45rem; }
 
 @media (max-width: 760px) {
   .columns { grid-template-columns: 1fr; }

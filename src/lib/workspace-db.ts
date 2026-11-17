@@ -56,12 +56,14 @@ export async function savePlan(userId: string, result: string) {
 
 export type SavedPlan = {
   id: string;
+  saved_on: string;
   result: {
     assignment_title: string | null;
     summary: string;
     assignment_deadline?: string | null;
+    assignment_due_date?: string | null;
     reply_draft: string;
-    tasks: { title: string; deadline: string | null }[];
+    tasks: ({ title: string; deadline: string | null; due_date?: string | null } | null)[];
   };
   completed: Record<string, boolean>;
 };
@@ -70,7 +72,8 @@ export const plansPerPage = 25;
 
 export async function listPlans(userId: string, query: string, page: number) {
   return await database()`
-    SELECT id, result, completed FROM actioninbox.plans
+    SELECT id, result, completed, (created_at AT TIME ZONE 'UTC')::date::text AS saved_on
+    FROM actioninbox.plans
     WHERE user_id = ${userId}
       AND (${query} = '' OR strpos(lower(result::text), lower(${query})) > 0)
     ORDER BY created_at DESC, id DESC
@@ -80,7 +83,8 @@ export async function listPlans(userId: string, query: string, page: number) {
 
 export async function listTaskPlans(userId: string) {
   return await database()`
-    SELECT id, result->>'assignment_title' AS title, result->'tasks' AS tasks, completed
+    SELECT id, result->>'assignment_title' AS title, result->'tasks' AS tasks, completed,
+      (created_at AT TIME ZONE 'UTC')::date::text AS saved_on
     FROM actioninbox.plans
     WHERE user_id = ${userId}
     ORDER BY created_at DESC, id DESC
@@ -89,6 +93,7 @@ export async function listTaskPlans(userId: string) {
     title: string | null;
     tasks: SavedPlan["result"]["tasks"];
     completed: SavedPlan["completed"];
+    saved_on: string;
   }[];
 }
 
@@ -97,8 +102,25 @@ export async function setTask(userId: string, planId: string, index: number, don
     UPDATE actioninbox.plans
     SET completed = jsonb_set(completed, ARRAY[${String(index)}]::text[], to_jsonb(${done}::boolean))
     WHERE user_id = ${userId} AND id = ${planId}::uuid
-      AND ${index}::integer < jsonb_array_length(result->'tasks')
+      AND jsonb_typeof(result->'tasks'->${index}::integer) = 'object'
   `;
+}
+
+export async function editSavedTask(userId: string, planId: string, index: number, dueDate: string | null, remove: boolean) {
+  const path = ["tasks", String(index)];
+  const rows = await database()`
+    UPDATE actioninbox.plans
+    SET result = jsonb_set(result, ${path}::text[],
+          CASE WHEN ${remove}::boolean THEN 'null'::jsonb
+               ELSE jsonb_set(result #> ${path}::text[], '{due_date}',
+                      COALESCE(to_jsonb(${dueDate}::text), 'null'::jsonb))
+          END),
+        completed = CASE WHEN ${remove}::boolean THEN completed - ${String(index)}::text ELSE completed END
+    WHERE user_id = ${userId} AND id = ${planId}::uuid
+      AND jsonb_typeof(result #> ${path}::text[]) = 'object'
+    RETURNING id
+  `;
+  return rows.length === 1;
 }
 
 export async function deletePlan(userId: string, planId: string) {

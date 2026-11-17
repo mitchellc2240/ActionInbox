@@ -2,35 +2,26 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ReplyDraft } from "./reply-draft";
-import styles from "./workspace.module.css";
-
-type Plan = {
-  summary: string;
-  assignment_deadline: string | null;
-  tasks: { title: string; deadline: string | null }[];
-  reply_draft: string;
-};
 
 export function EmailForm() {
   const router = useRouter();
-  const [plan, setPlan] = useState<Plan | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const body = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const body = new FormData(form);
     body.set("workflow", "email");
-    setPlan(null);
+    body.set("time_zone", Intl.DateTimeFormat().resolvedOptions().timeZone);
     setError("");
     setBusy(true);
     try {
       const response = await fetch("/api/analyze", { method: "POST", body });
       const result = await response.json().catch(() => null);
-      if (!response.ok || !result) throw new Error(result?.error ?? "Analysis is temporarily unavailable. Try again shortly.");
-      setPlan(result);
-      router.refresh();
+      if (!response.ok || typeof result?.id !== "string") throw new Error(result?.error ?? "Analysis is temporarily unavailable. Try again shortly.");
+      form.reset();
+      router.push(`/workspace?plan=${encodeURIComponent(result.id)}#plan-${encodeURIComponent(result.id)}`);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Analysis failed.");
     } finally {
@@ -48,15 +39,6 @@ export function EmailForm() {
         </fieldset>
       </form>
       {error && <p role="alert">{error}</p>}
-      {plan && <section className={styles.result} aria-live="polite">
-        <h2>Your checklist</h2>
-        <p>{plan.summary}</p>
-        {plan.assignment_deadline && <p>Overall due date · {plan.assignment_deadline}</p>}
-        {plan.tasks.length ? <ol>
-          {plan.tasks.map((task, index) => <li key={index}>{task.title}{task.deadline && ` · Due ${task.deadline}`}</li>)}
-        </ol> : <p>No clear tasks found.</p>}
-        <ReplyDraft key={plan.reply_draft} draft={plan.reply_draft} />
-      </section>}
     </>
   );
 }

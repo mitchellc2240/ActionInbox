@@ -8,11 +8,13 @@ import { EmailForm } from "./email-form";
 import { ReplyDraft } from "./reply-draft";
 import { WorkspaceHeader } from "./workspace-header";
 import { DeletePlanForm } from "./delete-plan-form";
+import { TaskEditor } from "./task-editor";
+import { calendarDate, formatDueDate, taskDueDate } from "@/lib/deadlines";
 
 export const dynamic = "force-dynamic";
 
 export default async function WorkspacePage({ searchParams }: {
-  searchParams: Promise<{ q?: string | string[]; page?: string | string[] }>;
+  searchParams: Promise<{ q?: string | string[]; page?: string | string[]; plan?: string | string[] }>;
 }) {
   const auth = getAuth();
   const { data: session } = auth ? await auth.getSession() : { data: null };
@@ -46,27 +48,35 @@ export default async function WorkspacePage({ searchParams }: {
             </form>
             {!plans && <p role="alert">Could not load your saved plans. Try again shortly.</p>}
             {plans?.length === 0 && <p className={styles.empty}>{query || page > 1 ? "No matching plans on this page." : "Analyze an email to save your first plan."}</p>}
-            {plans?.slice(0, plansPerPage).map((plan) => (
-              <details key={plan.id}>
-                <summary>{plan.result.assignment_title ?? "Email plan"}</summary>
-                <p>{plan.result.summary}</p>
-                {plan.result.assignment_deadline && <p>Overall due date · {plan.result.assignment_deadline}</p>}
-                <ul>
-                  {plan.result.tasks.map((task, index) => {
-                    const done = Boolean(plan.completed[index]);
-                    return <li key={index}>
-                      <form action={updateTask.bind(null, plan.id, index, !done)}>
-                        <span>{task.title}{task.deadline && ` · Due ${task.deadline}`} </span>
-                        <button type="submit">{done ? "Reopen" : "Mark done"}</button>
-                        {done && <span> Completed</span>}
-                      </form>
-                    </li>;
-                  })}
-                </ul>
-                <ReplyDraft draft={plan.result.reply_draft} />
-                <DeletePlanForm planId={plan.id} />
-              </details>
-            ))}
+            {plans?.slice(0, plansPerPage).map((plan) => {
+              const overallDate = plan.result.assignment_due_date ?? calendarDate(plan.result.assignment_deadline ?? null, plan.saved_on);
+              return (
+                <details key={plan.id} id={`plan-${plan.id}`} open={params.plan === plan.id || undefined}>
+                  <summary>{plan.result.assignment_title ?? "Email plan"}</summary>
+                  <p>{plan.result.summary}</p>
+                  {plan.result.assignment_deadline && <p>Overall due date · {overallDate ? formatDueDate(overallDate) : plan.result.assignment_deadline}</p>}
+                  {!plan.result.tasks.some(Boolean) && <p>No tasks in this plan.</p>}
+                  <ul>
+                    {plan.result.tasks.map((task, index) => {
+                      if (!task) return null;
+                      const done = Boolean(plan.completed[index]);
+                      const date = taskDueDate(task, plan.saved_on);
+                      const deadline = date ? formatDueDate(date) : task.due_date === null ? null : task.deadline;
+                      return <li key={index}>
+                        <form action={updateTask.bind(null, plan.id, index, !done)}>
+                          <span>{task.title}{deadline && ` · Due ${deadline}`} </span>
+                          <button type="submit">{done ? "Reopen" : "Mark done"}</button>
+                          {done && <span> Completed</span>}
+                        </form>
+                        <TaskEditor planId={plan.id} index={index} dueDate={date} />
+                      </li>;
+                    })}
+                  </ul>
+                  <ReplyDraft draft={plan.result.reply_draft} />
+                  <DeletePlanForm planId={plan.id} />
+                </details>
+              );
+            })}
             {(page > 1 || hasNext) && <nav aria-label="Saved plan pages">
               {page > 1 && <Link href={{ pathname: "/workspace", query: { q: query, page: page - 1 } }}>Newer plans</Link>}
               {" · Page "}{page}{" · "}
